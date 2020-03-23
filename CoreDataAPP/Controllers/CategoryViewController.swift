@@ -8,8 +8,10 @@
 
 import UIKit
 import RealmSwift
+import ChameleonFramework
 
-class CategoryViewController : UITableViewController {
+
+class CategoryViewController : SwipeTableViewController {
     let realm = try! Realm()
     var categories : Results<Category>?
     
@@ -18,9 +20,10 @@ class CategoryViewController : UITableViewController {
         super.viewDidLoad()
         
         loadCategories()
+        
     }
     
-// MARK: - Table view data source
+    // MARK: - Table view data source
     
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         // #warning Incomplete implementation, return the number of rows
@@ -28,13 +31,17 @@ class CategoryViewController : UITableViewController {
         return categories?.count ?? 1
     }
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell =  tableView.dequeueReusableCell(withIdentifier: "GoToItem", for: indexPath)
         
+        let cell = super.tableView(tableView, cellForRowAt: indexPath)
+        guard let categoryColor = UIColor(hexString: categories?[indexPath.row].color) else{fatalError()}
         cell.textLabel?.text = categories?[indexPath.row].name ?? "No Categories Added yet "
+        cell.backgroundColor = categoryColor
+        
+        cell.textLabel?.textColor = ContrastColorOf(backgroundColor: categoryColor, returnFlat: true)
         return cell
         
     }
-//Mark: - Tableview Delegate
+    //Mark: - Tableview Delegate
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         performSegue(withIdentifier: "goToItem", sender: self)
     }
@@ -44,14 +51,14 @@ class CategoryViewController : UITableViewController {
             destinationVC.selectedCategory = categories?[indexPath.row]
         }
     }
-//MARK: - Add new Category
+    //MARK: - Add new Category
     @IBAction func addButtinPressed(_ sender: UIBarButtonItem) {
         var textfield = UITextField()
         let alert = UIAlertController(title: "Add new Category", message: "", preferredStyle: .alert)
         let action = UIAlertAction(title: "Add Categry", style: .default) { (action) in
             let newCategory = Category()
             newCategory.name = textfield.text!
-            
+            newCategory.color = UIColor.randomFlat()?.hexValue() ?? "478FE6"
             
             self.save(category: newCategory)
         }
@@ -63,7 +70,7 @@ class CategoryViewController : UITableViewController {
         present(alert ,animated: true,completion: nil )
         
     }
-//MARK: - Manipulation Methods
+    //MARK: - Manipulation Methods
     
     //save the Category in the context
     func save(category: Category)  {
@@ -81,5 +88,18 @@ class CategoryViewController : UITableViewController {
         categories = realm.objects(Category.self)
     }
     
-    // }
+    // Delete data from Swipe
+    
+    override func updataModel(at indexpath: IndexPath) {
+        // super.updataModel(at: indexpath)
+        if  let category = self.categories?[indexpath.row]{
+            do{
+                try   self.realm.write{
+                    self.realm.delete(category)
+                }
+            }catch{
+                print("Error in deleting to the context \(error)")
+            }
+        }
+    }
 }
